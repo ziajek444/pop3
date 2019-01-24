@@ -28,9 +28,20 @@
 
 int main(int argc, char *argv[])
 {
+	// dane z pliku App.config
+	std::vector<std::string> dane = GetParameters();
+	std::string ADRSERV = dane[0];
+	std::string USRNAME = dane[1];
+	std::string PSSWRD = dane[2];
+	std::string PORT = dane[3];
+	int REFTIME = atoi(dane[4].c_str());
+	if (REFTIME < 5000) REFTIME = 6000;
+	
+
+
 	WSADATA wsa;
 	SOCKET s;
-	char *hostname = const_cast<char*>("pop3.wp.pl");
+	char *hostname = const_cast<char*>(ADRSERV.c_str()); // "pop3.wp.pl"
 	struct addrinfo hints, *result = NULL; 
 	int err;
 	//struct sockaddr_in addr;
@@ -50,7 +61,7 @@ int main(int argc, char *argv[])
 	hints.ai_socktype = SOCK_STREAM; 
 	hints.ai_family = AF_INET; 
 	hints.ai_protocol = IPPROTO_TCP; 
-	if ((err = getaddrinfo(hostname, "110", &hints, &result)) != 0) { 
+	if ((err = getaddrinfo(hostname, PORT.c_str(), &hints, &result)) != 0) { // "110"
 		printf("error %d\n", err);
 		return -1;
 	}
@@ -93,13 +104,13 @@ int main(int argc, char *argv[])
 	//------------------------------------------------------------------------------------------------
 	
 	//Sending login
-	std::string mess = "USER grouplong0@wp.pl\n\r";
+	std::string mess = "USER " + USRNAME + "\n\r"; //USER grouplong0@wp.pl\n\r
 	send(s, mess.c_str(), mess.size(), 0);
 	//Receiving information from the server
 	std::cout<< "login: " << ReadByte(s);
 
 	//sending password
-	mess = "PASS haslo1234\n\r";
+	mess = "PASS " + PSSWRD + "\n\r"; // PASS haslo1234\n\r
 	send(s, mess.c_str(), mess.size(), 0);
 	//Receiving information from the server
 	std::cout <<"password: "<< ReadByte(s);
@@ -122,34 +133,78 @@ int main(int argc, char *argv[])
 
 	
 	//------------------------------------------------------------------------------------------------
-
-	std::thread TD(Press_Q);
-	GLOBALS::escape = true;
+	char nr_wiad;
 	
-	pause_thread_ms(2000);
+	//std::cin >> nr_wiad;
+	//std::cout << nr_wiad;
+
+	GLOBALS::escape = true;
+	//std::thread TD(Press_Q);
+	
+	
+	
+	//pause_thread_ms(2000);
 	system("cls");
 	std::cout << "Ktora wiadomosc chcialbys odczytac?\r\n";
 	std::cout << "UIDL result: \n" << getUIDL(s) << std::endl;
 
+	GLOBALS::UIDL = getUIDL(s);
+	std::string tmp_UIDL = GLOBALS::UIDL;
+	
+	std::thread REFR(f, REFTIME, s);
+
 	while (GLOBALS::escape)
 	{
-		system("cls");
-		std::cout << "Ktora wiadomosc chcialbys odczytac?\r\n";
-		std::cout << "UIDL result: \n" << getUIDL(s) << std::endl;
+		//system("cls");
+		std::cout << "\r\nKtora wiadomosc chcialbys odczytac?\r\n";
+		std::cout << "UIDL result: \n" << tmp_UIDL << std::endl; //szybszy dostep do tmp_UIDL
 
-		pause_thread_ms(6000);
+		if (GLOBALS::UIDL != tmp_UIDL)
+		{
+			tmp_UIDL = GLOBALS::UIDL;
+			while(tmp_UIDL.find("+OK")) tmp_UIDL = GLOBALS::UIDL;
+			std::cout << "Nowe Wiadomosci\r\n";
+		}
+		else
+		{
+			//std::cout << "\r\nNie ma nowych wiadomosci\r\n";
+		}
 		
-		// Czytanie wiadomosci bez odsiwerzania
-		//to do 
+ 
+		std::cin >> nr_wiad;
+
+		if (nr_wiad == 'q') {
+			std::cout << "\r\npoczekaj na zamkniecie wszystkich watkow\r\nlub zabij program natychmiast\r\n\r\n";
+			GLOBALS::escape = false; 
+
+			while (!(REFR.joinable())) { 
+				continue;
+
+			}
+			REFR.join();
+			
+			std::cout << "break\r\n";
+			break;
+		}
+		else
+		{
+			int ix = static_cast<int>(nr_wiad - 48);
+			ReadMessage(s, ix);
+			std::cout << "\r\nWciśnij cokolwiek aby kontunuwać\r\n";
+			_getch();
+
+		}
+		pause_thread_ms(1000);
+
 	}
 
-	TD.join(); 
+	//TD.join(); 
+	if(REFR.joinable()) REFR.join();
 
 	// escaping 
 	closeConnectPop3(s);
 
-	printf("\n\nFinish\n\n", GLOBALS::escape);
-	_getch();
+	//_getch();
 	closesocket(s);
 	WSACleanup();
 

@@ -7,11 +7,14 @@
 #include <conio.h>
 #include <thread>         // std::thread
 #include <chrono>         // std::chrono::seconds
+#include <fstream>
+#include <vector>
 
 
 namespace GLOBALS {
 	extern bool escape;
 	extern int index;
+	extern std::string UIDL;
 }
 
 std::string ReadByte(SOCKET s)
@@ -94,6 +97,93 @@ void SingIn(std::string Login, std::string CertainlyNotPassword, SOCKET s)
 
 }
 
+void pause_thread_ms(int n)
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(n));
+	//std::cout << "pause of " << n << " seconds ended\n";
+}
+
+std::vector<std::string> GetParameters()
+{
+	std::vector<std::string> parametry = std::vector<std::string>(5);
+	//1->ADRSERV
+	//2->USRNAME
+	//3->PSSWRD_
+	//4->PORT___
+	//5->REFTIME
+	std::ifstream input("App.config");
+	if (input.is_open() && input.good()) {
+		std::cout << "poprawnie otwarty plik App.config\r\n";
+	}
+	else
+	{
+		std::cout << "problem z plikiem App.config\r\n";
+		_getch();
+		
+	}
+
+	std::string linia;
+	while (!input.eof())
+	{
+		std::getline(input, linia);
+		if (linia[0] == ' ') { std::cout << "W pliku linia nie moze zaczynac sie od spacji !!\r\n"; _getch(); }
+		if (linia[0] == ';' || linia.size() < 2) continue;
+		else
+		{
+			std::string tmp = linia.substr(0, 7);
+
+			if ("ADRSERV" == tmp) {
+				tmp = linia.substr(8);
+				parametry[0] = tmp;
+				std::cout << parametry[0] << std::endl;
+			}
+			else if ("USRNAME" == tmp) {
+				tmp = linia.substr(8);
+				parametry[1] = tmp;
+				std::cout << parametry[1] << std::endl;
+			}
+			else if ("PSSWRD_" == tmp) {
+				tmp = linia.substr(8);
+				parametry[2] = tmp;
+				std::cout << parametry[2] << std::endl;
+				}
+			else if ("PORT___" == tmp) {
+				tmp = linia.substr(8);
+				parametry[3] = tmp;
+				std::cout << parametry[3] << std::endl;
+				}
+			else if ("REFTIME" == tmp)
+			{
+				tmp = linia.substr(8);
+				parametry[4] = tmp;
+				std::cout << parametry[4] << std::endl;
+			}
+			else
+			{
+				std::cout << "Komenda "<<tmp<<" nie wspierana !!" << std::endl;
+				tmp = "";
+			}
+		}
+	}
+
+	input.close();
+	return parametry;
+
+}
+
+void f(int ms,SOCKET s)
+{
+	std::string tmp;
+	while (GLOBALS::escape)
+	{
+		pause_thread_ms(ms);
+		tmp = getUIDL(s);
+		if(tmp.find("+OK")) tmp = getUIDL(s);
+		GLOBALS::UIDL = tmp;
+	}
+	std::cout << "zakonczylem watek sprawdzajacy wiadomosci\r\n";
+}
+
 bool Press_Q()
 {
 	while (1)
@@ -109,13 +199,12 @@ bool Press_Q()
 			//printf("Do ur job again man ");
 			break;
 		}
+		pause_thread_ms(50);
 	}
 }
 
-void pause_thread_ms(int n)
-{
-	std::this_thread::sleep_for(std::chrono::milliseconds(n));
-	//std::cout << "pause of " << n << " seconds ended\n";
-}
+
+
+
 
 
