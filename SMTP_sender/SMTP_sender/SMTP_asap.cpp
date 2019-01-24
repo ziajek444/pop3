@@ -31,6 +31,8 @@ bool hasloOK(std::string str);
 
 // Przykladowa lista argumentow:
 // smtp.wp.pl grouplong0@wp.pl grouplong0@wp.pl haslo1234 "Tesoway temat" "testowa wiadomosc"
+// smtp.wp.pl tk20324@zut.edu.pl grouplong0@wp.pl haslo1234 "PS LAB N2 ZIMA 2018 14A" "Marcin Ziajkowski zm33851"
+// serwer adresat nadawca haslo temat wiadomosc
 
 int main(int args, char ** argv)
 {
@@ -75,7 +77,7 @@ void SendEmail(char *server, char *to, char* from, char *subject, char *message,
 	sockaddr_in dest;
 
 	int sent;
-	char line[200];
+	char line[1024];
 	char buferek[512];
 	memset(buferek, 0, 512);
 	int mp = sizeof(in_login);
