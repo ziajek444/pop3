@@ -9,22 +9,65 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 #include <stdlib.h>
+#include <algorithm>
+#include <string.h>
+#include <string>
+#include <vector>
+#include <iterator>
+#include "base64.h"
+
+#define CUC const unsigned char 
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #pragma warning(disable : 4996)
 
-void SendEmail(char *server, char *to, char* from, char *subject, char *message);
+void SendEmail(char *server, char *to, char* from, char *subject, char *message, std::string in_login, std::string in_haslo);
+bool serwerOK(std::string str);
+bool adresatOK(std::string str);
+bool nadawcaOK(std::string str);
+bool hasloOK(std::string str);
 
-int main()
+// Przykladowa lista argumentow:
+// smtp.wp.pl grouplong0@wp.pl grouplong0@wp.pl haslo1234 "Tesoway temat" "testowa wiadomosc"
+
+int main(int args, char ** argv)
 {
-	std::cout << "Hello World!\n";
-	SendEmail(const_cast<char*>("smtp.wp.pl"), const_cast<char*>("grouplong0@wp.pl"), const_cast<char*>("yinyang69@wp.pl"), const_cast<char*>("Tesoway temat"), const_cast<char*>("testowa wiadomosc"));
+	std::cout << args << " - "<<argv[1]; 
+	if (args < 7) {
+		std::cout << "Za mala liczba argumentow !\r\n";
+		std::cout << "wprowadz:\r\n";
+		std::cout << "serwer adresat nadawca haslo temat wiadomosc\r\n";
+	}
+	else if (args > 7)
+	{
+		std::cout << "Za duzo liczba argumentow !\r\n";
+		std::cout << "wprowadz:\r\n";
+		std::cout << "serwer adresat nadawca haslo temat wiadomosc\r\n";
+	}
+
+	std::string in_serwer    = argv[1];
+	std::string in_adresat   = argv[2];
+	std::string in_nadawca   = argv[3];
+	std::string in_haslo     = argv[4];
+	std::string in_temat     = argv[5];
+	std::string in_wiadomosc = argv[6];
+	
+	if (!serwerOK(in_serwer)) std::cout<<"nie poprawna nazwa serwera smtp\r\n";
+	if (!adresatOK(in_adresat)) std::cout << "nie poprawna nazwa adresata (adresat@dostawca.pl)\r\n";
+	if (!nadawcaOK(in_nadawca)) std::cout << "nie poprawna nazwa nadawcy (nadawca@dostawca.pl)\r\n";
+	if (!hasloOK(in_haslo)) std::cout << "za krotkie haslo\r\n";
+
+	std::string in_login = in_nadawca.substr(0, in_nadawca.find_first_of("@"));
+	
+	SendEmail(const_cast<char*>(in_serwer.c_str()), const_cast<char*>(in_adresat.c_str()), const_cast<char*>(in_nadawca.c_str()), const_cast<char*>(in_temat.c_str()), const_cast<char*>(in_wiadomosc.c_str()),in_login,in_haslo);
+	
 
 	return 0;
 }
 
-void SendEmail(char *server, char *to, char* from, char *subject, char *message)
+void SendEmail(char *server, char *to, char* from, char *subject, char *message, std::string in_login, std::string in_haslo)
 {
 	SOCKET sockfd;
 	WSADATA wsaData;
@@ -35,6 +78,12 @@ void SendEmail(char *server, char *to, char* from, char *subject, char *message)
 	char line[200];
 	char buferek[512];
 	memset(buferek, 0, 512);
+	int mp = sizeof(in_login);
+	std::string LOGIN = base64_encode(in_login);
+	std::string PASSW = base64_encode(in_haslo);
+	// dodaje tu eby nie dodawac do wiadomosci (upraszcza)
+	LOGIN += "\n";
+	PASSW += "\n";
 
 	if (WSAStartup(0x202, &wsaData) != SOCKET_ERROR)
 	{
@@ -49,8 +98,6 @@ void SendEmail(char *server, char *to, char* from, char *subject, char *message)
 
 			connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
 
-
-
 			strcpy_s(line,"ehlo komputer\n");
 			sent = send(sockfd, line, strlen(line), 0);
 			Sleep(5);
@@ -64,25 +111,25 @@ void SendEmail(char *server, char *to, char* from, char *subject, char *message)
 			sent = send(sockfd, line, strlen(line), 0);
 			Sleep(5);
 
-			sent = recv(sockfd, buferek, 512, 0); // VXNlcm5hbWU6 -> username:
+			sent = recv(sockfd, buferek, 512, 0);
 			memset(buferek, 0, 512);
 
 			//---------
 
-			strcpy_s(line, "eWlueWFuZzY5\n"); //yinyang69 -> eWlueWFuZzY5
+			strcpy_s(line, LOGIN.c_str());
 			sent = send(sockfd, line, strlen(line), 0);
 			Sleep(5);
 
-			sent = recv(sockfd, buferek, 512, 0); // UGFzc3dvcmQ6 -> password:
+			sent = recv(sockfd, buferek, 512, 0);
 			memset(buferek, 0, 512);
 
 			//---------
 
-			strcpy_s(line, "cnV3bm93YWdhNjk=\n"); //ruwnowaga69 -> cnV3bm93YWdhNjk=
+			strcpy_s(line, PASSW.c_str());
 			sent = send(sockfd, line, strlen(line), 0);
 			Sleep(5);
 
-			sent = recv(sockfd, buferek, 512, 0); // 
+			sent = recv(sockfd, buferek, 512, 0); 
 			memset(buferek, 0, 512);
 			//---------
 			//---------
@@ -152,3 +199,30 @@ void SendEmail(char *server, char *to, char* from, char *subject, char *message)
 	}
 }
 
+bool serwerOK(std::string str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	std::cout << str << "\r\n";
+	return (str.find("smtp") == std::string::npos) ? false : true;
+}
+
+bool adresatOK(std::string str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	std::cout << str << "\r\n";
+	return (str.find("@") == std::string::npos || str.find(".") == std::string::npos) ? false : true;
+}
+
+bool nadawcaOK(std::string str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	std::cout << str << "\r\n";
+	return (str.find("@") == std::string::npos || str.find(".") == std::string::npos) ? false : true;
+}
+
+bool hasloOK(std::string str)
+{
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	std::cout << str << "\r\n";
+	return (str.size() > 6) ? false : true;
+}

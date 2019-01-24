@@ -11,18 +11,24 @@
 //using namespace std;
 bool is_base64(std::string filename);
 
+// Przykladowa lista argumentow:
+// myfile.txt e
+// myfile.base64 d
+// wynikiem pierwszego bêdzie plik myfile.base64 z zawartoscia zakodowan¹ do base64
+// wynikeim drugiej listy argumentow bedzie plik myfile z odkodowana zawartosci¹
+
 int main(int args, char *argv[])
 {
     bool decode_out = false;
 	if(args == 3 && (argv[2][0] == 'e' || argv[2][0] == 'd')) { std::cout<<"Plik wejsciowy: "<<argv[1]<<std::endl; }
     else if (args == 4 && argv[3][0] == 'd') { std::cout<<"Plik wejsciowy: "<<argv[1]<<"\nPlik wyjsciowy: "<<argv[2]<<std::endl; decode_out = true; }
 	else { std::cout<<"Musisz podac plik wejsciowy\n"; return -1; }
-	
+
 	std::ifstream pFileIn;
 	pFileIn.open(argv[1], std::ios::binary);
 	if(!pFileIn.good() && !pFileIn.is_open()) { std::cout<<"Nie da sie otworzyc pliku "<<argv[1]<<std::endl; return -1; }
 	else std::cout<<"otwarto "<<argv[1]<<std::endl;
-	
+
 	std::string work_file = argv[1];
 	char type = (decode_out) ? argv[3][0] : argv[2][0];
 	std::string newFile = "";
@@ -58,11 +64,11 @@ int main(int args, char *argv[])
 		pFileIn.close();
 		return -1;
 	}
-	
-	
+
+
 	std::ofstream pFileOut;
 	std::ifstream exsist_test;
-	
+
 	exsist_test.open(newFile.c_str(), std::ios::binary);
 	if (exsist_test.is_open()) {
 		std::cout<<"plik juz istnieje, chcesz go nadpisac?\n[y/n]\n";
@@ -90,20 +96,17 @@ int main(int args, char *argv[])
 				goto jeszcze_raz;
 		}
 	}
-	else { 
+	else {
 		pFileOut.open(newFile.c_str(), std::ios::binary); //create new file
 		std::cout<<"stworzono plik "<<newFile<<std::endl;
 	}
-	
-	
+
+
 	if(!pFileOut.good() && !pFileOut.is_open()) { std::cout<<"Jest problem z plikiem wyjsciowym\n("<<newFile<<")\n"; return -1; }
 	else std::cout<<"otwarto "<<newFile<<std::endl;
     //-------------------START------------------------------
-	
-	
-	
-	
-	
+
+
 	if (type=='e')
 	{
 		// For encode --------------------
@@ -129,10 +132,8 @@ int main(int args, char *argv[])
 			ss="";
 		}
 	}
-	
-	
-	
-	
+
+
 	// ----------------------FINISH--------------------------
 	pFileOut.seekp(0,std::ios::end);
 	int size = pFileOut.tellp();
@@ -140,8 +141,8 @@ int main(int args, char *argv[])
 	std::cout<<"zamknieto "<<newFile<<std::endl;
 	pFileIn.close();
 	std::cout<<"zamknieto "<<argv[1]<<std::endl;
-	
-	if (!size) { 
+
+	if (!size) {
 		if( remove( newFile.c_str() ) == 0 )
 			 printf( "Usunieto pusty plik base64" );
 		else
@@ -155,7 +156,7 @@ bool is_base64(std::string filename)
 	int dot_pos = filename.find('.');
 	char base[] = ".base64";
 	if(!(filename.size()-dot_pos == 7) || !isalnum(filename[0])) {
-		return false; 
+		return false;
 	}
 	int i = 0;
 	while(i<7) {
